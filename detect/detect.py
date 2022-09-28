@@ -28,8 +28,12 @@ class DetectEngine:
             tic = time.perf_counter()
             error_df = detector.detect_noisy_cells()
             toc = time.perf_counter()
-            logging.debug("DONE with Error Detector: %s in %.2f secs", detector.name, toc-tic)
+            logging.debug("DONE with Error Detector: %s in %.2f secs", detector.name, toc - tic)
             errors.append(error_df)
+
+        # Manual error
+        if self.env['manual_error']:
+            errors.append(pd.DataFrame.from_dict(self.env['error_dict']))
 
         # Get unique errors only that might have been detected from multiple detectors.
         self.errors_df = pd.concat(errors, ignore_index=True).drop_duplicates().reset_index(drop=True)
