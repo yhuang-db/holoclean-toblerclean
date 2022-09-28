@@ -23,3 +23,6 @@ info/
 
 # Holoclean specific files
 debug/
+
+# Toblerclean
+venv/
