@@ -14,37 +14,37 @@ class RepairEngine:
         self.env = env
 
     def setup_featurized_ds(self, featurizers):
-        tic = time.clock()
+        tic = time.perf_counter()
         self.feat_dataset = FeaturizedDataset(self.ds, self.env, featurizers)
-        toc = time.clock()
+        toc = time.perf_counter()
         status = "DONE setting up featurized dataset."
         feat_time = toc - tic
         return status, feat_time
 
     def setup_repair_model(self):
-        tic = time.clock()
+        tic = time.perf_counter()
         feat_info = self.feat_dataset.featurizer_info
         output_dim = self.feat_dataset.classes
         self.repair_model = RepairModel(self.env, feat_info, output_dim,
                                         bias=self.env['bias'],
                                         layer_sizes=self.env['layer_sizes'])
-        toc = time.clock()
+        toc = time.perf_counter()
         status = "DONE setting up repair model."
         setup_time = toc - tic
         return status, setup_time
 
     def fit_repair_model(self):
-        tic = time.clock()
+        tic = time.perf_counter()
         X_train, Y_train, mask_train = self.feat_dataset.get_training_data()
         logging.info('training with %d training examples (cells)', X_train.shape[0])
         self.repair_model.fit_model(X_train, Y_train, mask_train, self.env['epochs'])
-        toc = time.clock()
+        toc = time.perf_counter()
         status = "DONE training repair model."
         train_time = toc - tic
         return status, train_time
 
     def fit_validate_repair_model(self, eval_engine, validate_period):
-        tic = time.clock()
+        tic = time.perf_counter()
         X_train, Y_train, mask_train = self.feat_dataset.get_training_data()
         logging.info('training with %d training examples (cells)', X_train.shape[0])
 
@@ -62,19 +62,19 @@ class RepairEngine:
                 weights, _ = self.get_featurizer_weights()
                 logging.info(weights)
 
-        toc = time.clock()
+        toc = time.perf_counter()
         status = "DONE training repair model."
         train_time = toc - tic
         return status, train_time
 
     def infer_repairs(self):
-        tic = time.clock()
+        tic = time.perf_counter()
         X_pred, mask_pred, infer_idx = self.feat_dataset.get_infer_data()
         Y_pred = self.repair_model.infer_values(X_pred, mask_pred)
         distr_df, infer_val_df = self.get_infer_dataframes(infer_idx, Y_pred)
         self.ds.generate_aux_table(AuxTables.cell_distr, distr_df, store=True, index_attrs=['_vid_'])
         self.ds.generate_aux_table(AuxTables.inf_values_idx, infer_val_df, store=True, index_attrs=['_vid_'])
-        toc = time.clock()
+        toc = time.perf_counter()
         status = "DONE inferring repairs."
         infer_time = toc - tic
         return status, infer_time
@@ -110,8 +110,8 @@ class RepairEngine:
         return distr_df, infer_val_df
 
     def get_featurizer_weights(self):
-        tic = time.clock()
+        tic = time.perf_counter()
         report = self.repair_model.get_featurizer_weights(self.feat_dataset.featurizer_info)
-        toc = time.clock()
+        toc = time.perf_counter()
         report_time = toc - tic
         return report, report_time

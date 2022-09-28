@@ -61,7 +61,7 @@ class EvalEngine:
         self.ds = dataset
 
     def load_data(self, name, fpath, tid_col, attr_col, val_col, na_values=None):
-        tic = time.clock()
+        tic = time.perf_counter()
         try:
             raw_data = pd.read_csv(fpath, na_values=na_values, dtype=str, encoding='utf-8')
             # We drop any ground truth values that are NULLs since we follow
@@ -92,7 +92,7 @@ class EvalEngine:
         except Exception:
             logging.error('load_data for table %s', name)
             raise
-        toc = time.clock()
+        toc = time.perf_counter()
         load_time = toc - tic
         return status, load_time
 
@@ -104,7 +104,7 @@ class EvalEngine:
                         if attr is categorical, then report precision, recall etc.
                      if attr is None, compute results for all attrs
         """
-        tic = time.clock()
+        tic = time.perf_counter()
         eval_report_dict = {}
         # attr is not None and is numerical
         # or attr is None(query on all attrs) and no categorical
@@ -152,7 +152,7 @@ class EvalEngine:
         if attr:
             report_str = "# Attribute:{};{}".format(attr, report_str)
 
-        toc = time.clock()
+        toc = time.perf_counter()
         report_time = toc - tic
         return report_str, report_time, report
 
