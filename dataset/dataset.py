@@ -33,6 +33,7 @@ class Dataset:
     def __init__(self, name, env):
         self.env = env
         self.id = name
+        self.dataset_name = None
         self.raw_data = None
         self.repaired_data = None
         self.constraints = None
@@ -165,6 +166,7 @@ class Dataset:
         except Exception:
             logging.error('loading data for table %s', name)
             raise
+        self.dataset_name = name
         toc = time.perf_counter()
         load_time = toc - tic
         return status, load_time
