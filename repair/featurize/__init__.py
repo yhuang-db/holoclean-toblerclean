@@ -7,6 +7,7 @@ from .initsimfeat import InitSimFeaturizer
 from .langmodelfeat import LangModelFeaturizer
 from .occurattrfeat import OccurAttrFeaturizer
 from .embeddingfeat import EmbeddingFeaturizer
+from .discretefeat import DiscreteFeaturizer
 
 __all__ = ['ConstraintFeaturizer',
            'FeaturizedDataset',
@@ -17,4 +18,5 @@ __all__ = ['ConstraintFeaturizer',
            'LangModelFeaturizer',
            'OccurAttrFeaturizer',
            'EmbeddingFeaturizer',
+           'DiscreteFeaturizer'
            ]
