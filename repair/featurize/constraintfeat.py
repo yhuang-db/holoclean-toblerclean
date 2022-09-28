@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from .featurizer import Featurizer
 from dataset import AuxTables
-from dcparser.constraint import is_symmetric
+from dcparser.constraint import is_symmetric, get_flip_operation
 
 # unary_template is used for constraints where the current predicate
 # used for detecting violations in pos_values have a reference to only
@@ -47,7 +47,7 @@ ex_binary_template = Template('SELECT _vid_, val_id, 1 violations '
 
 
 def gen_feat_tensor(violations, total_vars, classes):
-    tensor = torch.zeros(total_vars,classes,1)
+    tensor = torch.zeros(total_vars, classes, 1)
     if violations:
         for entry in violations:
             vid = int(entry[0])
@@ -114,9 +114,13 @@ class ConstraintFeaturizer(Featurizer):
         """
         attr = predicate.components[rel_idx][1]
         op = predicate.operation
+        # the latter one should flip the operation,
+        # if t3.rv_val is always on the left side in query template
+        if rel_idx == 1:
+            op = get_flip_operation(op)
         const = '{}."{}"'.format(
-                predicate.components[1-rel_idx][0],
-                predicate.components[1-rel_idx][1])
+            predicate.components[1 - rel_idx][0],
+            predicate.components[1 - rel_idx][1])
 
         return attr, op, const
 
@@ -125,7 +129,7 @@ class ConstraintFeaturizer(Featurizer):
             if is_symmetric(predicate.operation):
                 return True, ['t1'], ['t2']
             else:
-                return True, ['t1','t2'], ['t2', 't1']
+                return True, ['t1', 't2'], ['t2', 't1']
         elif 't1' in predicate.cnf_form and 't2' not in predicate.cnf_form:
             return False, ['t1'], None
         elif 't1' not in predicate.cnf_form and 't2' in predicate.cnf_form:
@@ -220,7 +224,7 @@ class ConstraintFeaturizer(Featurizer):
 
         This CNF is usually used for the left relation when counting violations.
         """
-        orig_preds = predicates[:idx] + predicates[(idx+1):]
+        orig_preds = predicates[:idx] + predicates[(idx + 1):]
         orig_cnf = " AND ".join([pred.cnf_form for pred in orig_preds])
         return orig_cnf
 

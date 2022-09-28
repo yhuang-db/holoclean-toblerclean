@@ -10,6 +10,19 @@ def is_symmetric(operation):
     return False
 
 
+def get_flip_operation(operation):
+    if operation == '<=':
+        return '>='
+    elif operation == '>=':
+        return '<='
+    elif operation == '<':
+        return '>'
+    elif operation == '>':
+        return '<'
+    else:
+        return operation
+
+
 def contains_operation(string):
     """
     Method to check if a given string contains one of the operation signs.
@@ -28,6 +41,7 @@ class DenialConstraint:
     """
     Class that defines the denial constraints.
     """
+
     def __init__(self, dc_string, schema):
         """
         Constructing denial constraint object.
@@ -71,6 +85,7 @@ class Predicate:
     """
     This class represents predicates.
     """
+
     def __init__(self, predicate_string, tuple_names, schema):
         """
         Constructing predicate object by setting self.cnf_form to e.g. t1."Attribute" = t2."Attribute".
@@ -96,8 +111,8 @@ class Predicate:
             else:
                 # Need to wrap column names in quotations for Postgres
                 self.cnf_form += '{alias}."{attr}"'.format(
-                        alias=component[0],
-                        attr=component[1])
+                    alias=component[0],
+                    attr=component[1])
             if i < len(self.components) - 1:
                 self.cnf_form += self.operation
         logging.debug("DONE parsing predicate: %s", predicate_string)
@@ -115,10 +130,10 @@ class Predicate:
         num_tuples = len(predicate_string.split(','))
         if num_tuples < 2:
             raise Exception('Less than 2 tuples in predicate: ' +
-                                    predicate_string)
+                            predicate_string)
         elif num_tuples > 2:
             raise Exception('More than 2 tuples in predicate: ' +
-                                    predicate_string)
+                            predicate_string)
 
         operation = self.operation_string
         if predicate_string[0:len(operation)] != operation:
@@ -132,7 +147,7 @@ class Predicate:
             if len(stack[-1:]) > 0 and stack[-1] == "'":
                 if predicate_string[i] == "'":
                     if i == len(predicate_string) - 1 or \
-                            predicate_string[i+1] != ')':
+                            predicate_string[i + 1] != ')':
                         raise Exception("Expected ) after end of literal")
                     components.append(str_so_far)
                     current_component = []
