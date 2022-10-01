@@ -10,6 +10,8 @@ import sqlalchemy as sql
 index_template = Template('CREATE INDEX $idx_title ON "$table" ($attrs)')
 drop_table_template = Template('DROP TABLE IF EXISTS "$table"')
 create_table_template = Template('CREATE TABLE "$table" AS ($stmt)')
+create_gist_index_template = Template('CREATE INDEX $idx_title ON "$table" USING GIST ($spatial_attr)')
+cluster_table_on_index_template = Template('CLUSTER "$table" USING $idx_title')
 
 
 class DBengine:
@@ -101,6 +103,37 @@ class DBengine:
         conn.close()
         toc = time.perf_counter()
         logging.debug('Time to create index: %.2f secs', toc-tic)
+        return result
+
+    def create_spatial_db_index(self, name, table, spatial_attr):
+        """
+        create_spatial_db_index creates a GIST index on the column
+        specified in :param spatial_attr: with the given :param name: on
+        :param table:.
+
+        :param name: (str) name of index
+        :param table: (str) name of table
+        :param spatial_attr: spatial attribute to create index on
+        """
+        # We need to quote each attribute since Postgres auto-downcases unquoted column references
+        s_attr = f'"{spatial_attr}"'
+        sql_create_gist = create_gist_index_template.substitute(idx_title=name, table=table, spatial_attr=s_attr)
+        tic = time.perf_counter()
+        conn = self.engine.connect()
+        result = conn.execute(sql_create_gist)
+        conn.close()
+        toc = time.perf_counter()
+        logging.debug('Time to create spatial index: %.2f secs', toc - tic)
+        return result
+
+    def cluster_db_using_index(self, table_name, index_name):
+        sql_cluster = cluster_table_on_index_template.substitute(idx_title=index_name, table=table_name)
+        tic = time.perf_counter()
+        conn = self.engine.connect()
+        result = conn.execute(sql_cluster)
+        conn.close()
+        toc = time.perf_counter()
+        logging.debug('Time to cluster table on index: %.2f secs', toc - tic)
         return result
 
     def _apply_func(self, func, collection):
