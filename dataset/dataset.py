@@ -19,6 +19,8 @@ class AuxTables(Enum):
     cell_distr     = 5
     inf_values_idx = 6
     inf_values_dom = 7
+    geom           = 8
+    distance_matrix= 9
 
 
 class CellStatus(Enum):
