@@ -24,6 +24,9 @@ template_range_search = Template(
 
 
 def cal_weighted_violation(distance_list):
+    """
+    weight(d) = exp(-d)
+    """
     na = np.array(distance_list)
     exp_list = np.exp(np.negative(na))
     return exp_list.sum()
@@ -61,8 +64,8 @@ class ContinuousFeaturizer(Featurizer):
                                                  tobler_attr=self.tobler_attr,
                                                  radius=self.tobler_max_distance)
         result = self.ds.engine.execute_query(query)
-        weighted_violation = [[i[0], i[1], cal_weighted_violation(i[2])] for i in result]
-        tensor = gen_feat_tensor(weighted_violation, self.total_vars, self.classes)
+        weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2])] for i in result]
+        tensor = gen_feat_tensor(weighted_violations, self.total_vars, self.classes)
         tensor = F.normalize(tensor, p=2, dim=1)
         return tensor
 
