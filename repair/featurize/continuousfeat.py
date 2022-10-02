@@ -47,7 +47,7 @@ class ContinuousFeaturizer(Featurizer):
 
     def specific_setup(self):
         self.name = "continuous distance feature"
-        self.tobler_max_distance = self.env["tobler_distance"]
+        self.tobler_max_distance = self.env["tobler_continuous_distance"]
         self.tobler_attr = self.env["tobler_attr"]
         self.compute_distance_matrix()
 

@@ -1,10 +1,11 @@
 from functools import partial
-import torch
-import torch.nn.functional as F
 from string import Template
 
-from .featurizer import Featurizer
+import torch
+import torch.nn.functional as F
+
 from dataset import AuxTables
+from .featurizer import Featurizer
 
 template_ring = Template(
     'SELECT _vid_, val_id, count(1) AS violations '
@@ -34,12 +35,13 @@ class DiscreteFeaturizer(Featurizer):
 
     def specific_setup(self):
         self.name = "1000 constraints featurizer"
-        self.distances = self.env["tobler_distances"]
+        self.distances = self.env["tobler_discrete_distances"]
+        self.tobler_attr = self.env["tobler_attr"]
 
     def fill_query_template(self, inner, outer):
         return template_ring.substitute(init_table=self.ds.raw_data.name,
                                         pos_values=AuxTables.pos_values.name,
-                                        tobler_attr=self.env["tobler_attr"],
+                                        tobler_attr=self.tobler_attr,
                                         inner=inner,
                                         outer=outer)
 
