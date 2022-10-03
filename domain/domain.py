@@ -1,17 +1,16 @@
 import collections
-from functools import lru_cache
 import logging
-import pandas as pd
 import time
+from functools import lru_cache
 
-import itertools
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 from dataset import AuxTables, CellStatus
-from .estimators import *
-from .correlations import compute_norm_cond_entropy_corr
 from utils import NULL_REPR
+from .correlations import compute_norm_cond_entropy_corr
+from .estimators import *
 
 
 class DomainEngine:
@@ -131,8 +130,8 @@ class DomainEngine:
                     # tau becomes a threshhold on co-occurrence frequency
                     # based on the co-occurrence probability threshold
                     # domain_thresh_1.
-                    tau = float(self.domain_thresh_1*denominator)
-                    top_cands = [(val2, count/denominator) for (val2, count) in pair_stats[attr1][attr2][val1].items() if count > tau]
+                    tau = float(self.domain_thresh_1 * denominator)
+                    top_cands = [(val2, count / denominator) for (val2, count) in pair_stats[attr1][attr2][val1].items() if count > tau]
                     out[attr1][attr2][val1] = top_cands
         return out
 
@@ -150,8 +149,8 @@ class DomainEngine:
             return []
         attr_correlations = self.correlations[attr]
         return sorted([corr_attr
-            for corr_attr, corr_strength in attr_correlations.items()
-            if corr_attr != attr and corr_strength >= thres])
+                       for corr_attr, corr_strength in attr_correlations.items()
+                       if corr_attr != attr and corr_strength >= thres])
 
     def generate_domain(self):
         """
@@ -209,7 +208,7 @@ class DomainEngine:
                     # Initial value is NULL and we cannot come up with
                     # a domain (note that NULL is not included in the domain)
                     if init_value == NULL_REPR and len(dom) == 0:
-                       continue
+                        continue
 
                     # Not enough domain values, we need to get some random
                     # values (other than 'init_value') for training. However,
@@ -404,7 +403,7 @@ class DomainEngine:
         # pruning based on estimator's posterior probabilities.
         if self.env['estimator_type'] is None \
                 or (self.env['weak_label_thresh'] == 1 \
-                and self.env['domain_thresh_2'] == 0):
+                    and self.env['domain_thresh_2'] == 0):
             return self.domain_df
 
         domain_df = self.domain_df.sort_values('_vid_')
@@ -486,8 +485,8 @@ class DomainEngine:
 
         # update our cell domain df with our new updated domain
         domain_df = pd.DataFrame.from_records(updated_domain_df,
-                columns=updated_domain_df[0].dtype.names)\
-                        .drop('index', axis=1).sort_values('_vid_')
+                                              columns=updated_domain_df[0].dtype.names) \
+            .drop('index', axis=1).sort_values('_vid_')
         logging.debug('DONE assembling cell domain table in %.2fs', time.perf_counter() - tic)
 
         logging.info('number of (additional) weak labels assigned from estimator: %d', num_weak_labels)
