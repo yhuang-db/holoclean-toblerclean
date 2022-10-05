@@ -39,6 +39,12 @@ class DomainEngine:
         self.single_stats = {}
         self.pair_stats = {}
 
+        # tobler
+        self.tobler_domain = env['tobler_domain']
+        self.tobler_domain_distance = env['tobler_domain_distance']
+        self.tobler_attr = env['tobler_attr']
+        self.tobler_location_attr = env['tobler_location_attr']
+
     def setup(self):
         """
         setup initializes the in-memory and Postgres auxiliary tables (e.g.
@@ -196,7 +202,7 @@ class DomainEngine:
         for row in tqdm(list(records)):
             tid = row['_tid_']
             for attr in self.ds.get_active_attributes():
-                if attr is self.env['tobler_attr']:
+                if self.tobler_domain and attr is self.tobler_attr:
                     init_value, init_value_idx, dom = self.get_tobler_domain_cell(attr, row)
                 else:
                     init_value, init_value_idx, dom = self.get_domain_cell(attr, row)
@@ -515,9 +521,9 @@ class DomainEngine:
         self.ds.engine.cluster_db_using_index(spatial_table_name, spatial_index_name)
 
         sql = f'''
-        SELECT t1._tid_, ARRAY_AGG(DISTINCT t2.{self.env['tobler_attr']}) AS domain
+        SELECT t1._tid_, ARRAY_AGG(DISTINCT t2.{self.tobler_attr}) AS domain
         FROM {spatial_table_name} t1, {spatial_table_name} t2
-        WHERE ST_DWithin(t1.geom, t2.geom, {self.env['tobler_continuous_distance']})
+        WHERE ST_DWithin(t1.geom, t2.geom, {self.tobler_domain_distance})
           AND t1._tid_ <> t2._tid_
         GROUP BY t1._tid_
         '''
