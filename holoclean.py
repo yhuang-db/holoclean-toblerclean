@@ -507,3 +507,8 @@ class Session:
                 columns=['tid', 'attribute', 'inferred_val', 'proba'],
                 dtype=str)
         return df_preds
+
+    def init_tobler_table(self):
+        status, load_time = self.ds.init_tobler_table()
+        logging.info(status)
+        logging.debug('Time to init tobler auxiliary tables: %.2f secs', load_time)
