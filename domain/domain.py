@@ -52,9 +52,6 @@ class DomainEngine:
         """
         tic = time.time()
 
-        # Tobler: generate domain with distance join
-        self.setup_tobler_distance_join_table()
-
         if self.correlations is None:
             self.compute_correlations()
         self.setup_attributes()
@@ -506,39 +503,10 @@ class DomainEngine:
         logging.debug('DONE generating domain and weak labels')
         return domain_df
 
-    def setup_tobler_distance_join_table(self):
-        tic = time.perf_counter()
-        logging.debug("Setting up distance join table...")
-
-        sql = f'''
-        SELECT *, ST_MakePoint(x::REAL, y::REAL) AS geom
-        FROM {self.ds.dataset_name}
-        '''
-        spatial_table_name = f'{self.ds.dataset_name}_spatial'
-        spatial_index_name = f'{self.ds.dataset_name}_spatial_geom_idx'
-        self.ds.engine.create_db_table_from_query(spatial_table_name, sql)
-        self.ds.engine.create_spatial_db_index(spatial_index_name, spatial_table_name, 'geom')
-        self.ds.engine.cluster_db_using_index(spatial_table_name, spatial_index_name)
-
-        sql = f'''
-        SELECT t1._tid_, ARRAY_AGG(DISTINCT t2.{self.tobler_attr}) AS domain
-        FROM {spatial_table_name} t1, {spatial_table_name} t2
-        WHERE ST_DWithin(t1.geom, t2.geom, {self.tobler_domain_distance})
-          AND t1._tid_ <> t2._tid_
-        GROUP BY t1._tid_
-        '''
-        distance_join_table_name = 'distance_join'
-        distance_join_index_name = distance_join_table_name + '_index'
-        self.ds.engine.create_db_table_from_query(distance_join_table_name, sql)
-        self.ds.engine.create_db_index(distance_join_index_name, distance_join_table_name, ['_tid_'])
-
-        toc = time.perf_counter()
-        logging.debug("DONE with distance join in %.2f secs", toc - tic)
-
     def get_tobler_domain_cell(self, attr, row):
         tid = row['_tid_']
         init_value = row[attr]
-        result = self.ds.engine.execute_query(f'SELECT domain FROM distance_join WHERE _tid_ = {tid}')
+        result = self.ds.engine.execute_query(f'SELECT _domain_ FROM {AuxTables.distance_join_domain.name} WHERE _tid_ = {tid}')
         if len(result) == 0:
             domain = set()
         else:

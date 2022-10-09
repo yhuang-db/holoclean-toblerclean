@@ -1,37 +1,39 @@
-from enum import Enum
 import logging
 import os
 import time
+from enum import Enum
 
-import numpy as np
 import pandas as pd
 
+from utils import dictify_df, NULL_REPR
 from .dbengine import DBengine
 from .table import Table, Source
-from utils import dictify_df, NULL_REPR
 
 
 class AuxTables(Enum):
-    c_cells        = 1
-    dk_cells       = 2
-    cell_domain    = 3
-    pos_values     = 4
-    cell_distr     = 5
+    c_cells = 1
+    dk_cells = 2
+    cell_domain = 3
+    pos_values = 4
+    cell_distr = 5
     inf_values_idx = 6
     inf_values_dom = 7
-    geom           = 8
-    distance_matrix= 9
+    geom = 8
+    distance_matrix = 9
+    distance_join_domain = 10
 
 
 class CellStatus(Enum):
-    NOT_SET        = 0
-    WEAK_LABEL     = 1
-    SINGLE_VALUE   = 2
+    NOT_SET = 0
+    WEAK_LABEL = 1
+    SINGLE_VALUE = 2
+
 
 class Dataset:
     """
     This class keeps all dataframes and tables for a HC session.
     """
+
     def __init__(self, name, env):
         self.env = env
         self.id = name
@@ -121,7 +123,7 @@ class Dataset:
             # Otherwise we use the entity values directly as _tid_'s.
             if entity_col is None:
                 # auto-increment
-                df.insert(0, '_tid_', range(0,len(df)))
+                df.insert(0, '_tid_', range(0, len(df)))
             else:
                 # use entity IDs as _tid_'s directly
                 df.rename({entity_col: '_tid_'}, axis='columns', inplace=True)
@@ -139,7 +141,7 @@ class Dataset:
                 for attr in self.categorical_attrs:
                     df_correct_type.loc[df_correct_type[attr].isnull(), attr] = NULL_REPR
                 for attr in self.numerical_attrs:
-                    df_correct_type[attr] =  df_correct_type[attr].astype(float)
+                    df_correct_type[attr] = df_correct_type[attr].astype(float)
 
                 df_correct_type.to_sql(self.raw_data.name, self.engine.engine, if_exists='replace', index=False,
                                        index_label=None)
@@ -159,7 +161,7 @@ class Dataset:
                 # Generate indexes on attribute columns for faster queries
                 for attr in self.raw_data.get_attributes():
                     # Generate index on attribute
-                    self.raw_data.create_db_index(self.engine,[attr])
+                    self.raw_data.create_db_index(self.engine, [attr])
 
             # Create attr_to_idx dictionary (assign unique index for each attribute)
             # and attr_count (total # of attributes)
@@ -273,7 +275,7 @@ class Dataset:
 
         Cell ID: _tid_ * (# of attributes) + attr_idx
         """
-        vid = tuple_id*self.attr_count + self.attr_to_idx[attr_name]
+        vid = tuple_id * self.attr_count + self.attr_to_idx[attr_name]
         return vid
 
     def get_statistics(self):
@@ -349,10 +351,10 @@ class Dataset:
         Filters out NULL values so no entries in the dictionary would have NULLs.
         """
         data_df = self.get_quantized_data() if self.do_quantization else self.get_raw_data()
-        tmp_df = data_df[[first_attr, second_attr]]\
-            .loc[(data_df[first_attr] != NULL_REPR) & (data_df[second_attr] != NULL_REPR)]\
-            .groupby([first_attr, second_attr])\
-            .size()\
+        tmp_df = data_df[[first_attr, second_attr]] \
+            .loc[(data_df[first_attr] != NULL_REPR) & (data_df[second_attr] != NULL_REPR)] \
+            .groupby([first_attr, second_attr]) \
+            .size() \
             .reset_index(name="count")
         return dictify_df(tmp_df)
 
@@ -360,7 +362,7 @@ class Dataset:
         """
         Returns (number of random variables, count of distinct values across all attributes).
         """
-        query = 'SELECT count(_vid_), max(domain_size) FROM %s'%AuxTables.cell_domain.name
+        query = 'SELECT count(_vid_), max(domain_size) FROM %s' % AuxTables.cell_domain.name
         res = self.engine.execute_query(query)
         total_vars = int(res[0][0])
         classes = int(res[0][1])
@@ -374,7 +376,7 @@ class Dataset:
                 "(SELECT _tid_, attribute, " \
                 "_vid_, init_value, string_to_array(regexp_replace(domain, \'[{\"\"}]\', \'\', \'gi\'), \'|||\') as domain " \
                 "FROM %s) as t1, %s as t2 " \
-                "WHERE t1._vid_ = t2._vid_"%(AuxTables.cell_domain.name, AuxTables.inf_values_idx.name)
+                "WHERE t1._vid_ = t2._vid_" % (AuxTables.cell_domain.name, AuxTables.inf_values_idx.name)
         self.generate_aux_table_sql(AuxTables.inf_values_dom, query, index_attrs=['_tid_'])
         self.aux_table[AuxTables.inf_values_dom].create_db_index(self.engine, ['attribute'])
         status = "DONE collecting the inferred values."
@@ -391,7 +393,7 @@ class Dataset:
             for attr in repaired_vals[tid]:
                 init_records[tid][attr] = repaired_vals[tid][attr]
         repaired_df = pd.DataFrame.from_records(init_records)
-        name = self.raw_data.name+'_repaired'
+        name = self.raw_data.name + '_repaired'
         self.repaired_data = Table(name, Source.DF, df=repaired_df)
         self.repaired_data.store_to_db(self.engine.engine)
         status = "DONE generating repaired dataset"
@@ -414,3 +416,52 @@ class Dataset:
             raise Exception("cannot retrieve embedding model: it was never trained and loaded!")
         return self._embedding_model
 
+    def init_tobler_table(self):
+        tic = time.perf_counter()
+        logging.debug("Generating tobler auxiliary tables...")
+
+        # 1. create geom table
+        x, y = self.env['tobler_location_attr']
+        sql_create_geom_table = f'''SELECT *, ST_MakePoint({x}::real, {y}::real) AS _geom_ FROM {self.raw_data.name}'''
+        self.engine.create_db_table_from_query(name=AuxTables.geom.name, query=sql_create_geom_table)
+        spatial_index_name = f'{AuxTables.geom.name}_idx'
+        self.engine.create_spatial_db_index(name=spatial_index_name, table=AuxTables.geom.name, spatial_attr='_geom_')
+        self.engine.cluster_db_using_index(table_name=AuxTables.geom.name, index_name=spatial_index_name)
+
+        # 2. create distance join table
+        tobler_attr = self.env['tobler_attr']
+        tobler_domain_distance = self.env['tobler_domain_distance']
+        sql_create_distance_join_domain_table = f'''
+        SELECT t1._tid_, ARRAY_AGG(DISTINCT t2.{tobler_attr}) AS _domain_
+        FROM {AuxTables.geom.name} t1, {AuxTables.geom.name} t2
+        WHERE ST_DWithin(t1._geom_, t2._geom_, {tobler_domain_distance})
+          AND t1._tid_ <> t2._tid_
+        GROUP BY t1._tid_
+        '''
+        self.engine.create_db_table_from_query(name=AuxTables.distance_join_domain.name, query=sql_create_distance_join_domain_table)
+        distance_join_domain_index_name = f'{AuxTables.distance_join_domain.name}_idx'
+        self.engine.create_db_index(name=distance_join_domain_index_name, table=AuxTables.distance_join_domain.name, attr_list=['_tid_'])
+        self.engine.cluster_db_using_index(table_name=AuxTables.distance_join_domain.name, index_name=distance_join_domain_index_name)
+
+        # 3. create distance matrix
+        if 'tobler_continuous_distance' in self.env:
+            tobler_max_distance = self.env['tobler_continuous_distance']
+        elif 'tobler_discrete_distances' in self.env:
+            tobler_max_distance = self.env["tobler_discrete_distances"][-1]
+        else:
+            raise KeyError("No tobler_max_distance available. ")
+        sql_create_distance_matrix = f"""
+        SELECT t1._tid_ AS tid_1, t2._tid_ AS tid_2, ST_Distance(t1._geom_, t2._geom_) AS distance
+        FROM {AuxTables.geom.name} t1, {AuxTables.geom.name} t2
+        WHERE ST_DWithin(t1._geom_, t2._geom_, {tobler_max_distance})
+          AND t1._tid_ <> t2._tid_
+        """
+        self.engine.create_db_table_from_query(name=AuxTables.distance_matrix.name, query=sql_create_distance_matrix)
+        distance_matrix_index_name = f"{AuxTables.distance_matrix.name}_idx"
+        self.engine.create_db_index(name=distance_matrix_index_name, table=AuxTables.distance_matrix.name, attr_list=["tid_1", "distance"])
+        self.engine.cluster_db_using_index(table_name=AuxTables.distance_matrix.name, index_name=distance_matrix_index_name)
+
+        toc = time.perf_counter()
+        total_time = toc - tic
+        status = "DONE generating tobler auxiliary tables"
+        return status, total_time

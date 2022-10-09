@@ -7,16 +7,20 @@ import torch.nn.functional as F
 from dataset import AuxTables
 from .featurizer import Featurizer
 
-template_ring = Template(
-    'SELECT _vid_, val_id, count(1) AS violations '
-    '  FROM $init_table AS t1, $init_table AS t2, $pos_values AS t3 '
-    ' WHERE t1._tid_ != t2._tid_ '
-    '   AND t1._tid_ = t3._tid_ '
-    '   AND t3.attribute = \'$tobler_attr\' '
-    '   AND ((t1.x::real > t2.x::real - $outer AND t1.x::real <= t2.x::real - $inner) OR (t1.x::real >= t2.x::real + $inner AND t1.x::real < t2.x::real + $outer)) '
-    '   AND ((t1.y::real > t2.y::real - $outer AND t1.y::real <= t2.y::real - $inner) OR (t1.y::real >= t2.y::real + $inner AND t1.y::real < t2.y::real + $outer)) '
-    '   AND t3.rv_val::TEXT <> t2.$tobler_attr '
-    'GROUP BY _vid_, val_id;'
+template_ring_range_search = Template(
+    '''
+    SELECT _vid_, val_id, COUNT(1) AS distances
+      FROM $init_table AS t1, $init_table as t2, $pos_values AS t3, $distance_matrix as t4
+     WHERE t1._tid_ <> t2._tid_
+       AND t1._tid_ = t3._tid_
+       AND t3.attribute = \'$tobler_attr\'
+       AND t3.rv_val::TEXT <> t2.$tobler_attr
+       AND t1._tid_ = t4.tid_1
+       AND t2._tid_ = t4.tid_2
+       AND t4.distance >= $inner
+       AND t4.distance < $outer
+    GROUP BY _vid_, val_id;
+    '''
 )
 
 
@@ -35,15 +39,16 @@ class DiscreteFeaturizer(Featurizer):
 
     def specific_setup(self):
         self.name = "1000 constraints featurizer"
-        self.distances = self.env["tobler_discrete_distances"]
         self.tobler_attr = self.env["tobler_attr"]
+        self.distances = self.env["tobler_discrete_distances"]
 
     def fill_query_template(self, inner, outer):
-        return template_ring.substitute(init_table=self.ds.raw_data.name,
-                                        pos_values=AuxTables.pos_values.name,
-                                        tobler_attr=self.tobler_attr,
-                                        inner=inner,
-                                        outer=outer)
+        return template_ring_range_search.substitute(init_table=self.ds.raw_data.name,
+                                                     pos_values=AuxTables.pos_values.name,
+                                                     distance_matrix=AuxTables.distance_matrix.name,
+                                                     tobler_attr=self.tobler_attr,
+                                                     inner=inner,
+                                                     outer=outer)
 
     def generate_sql(self):
         queries = []

@@ -54,9 +54,8 @@ class ContinuousFeaturizer(Featurizer):
     def specific_setup(self):
         self.name = "continuous distance feature"
         self.tobler_attr = self.env["tobler_attr"]
-        self.tobler_normalized_distance = self.env["tobler_normalized_distance"]
         self.tobler_max_distance = self.env["tobler_continuous_distance"]
-        self.compute_distance_matrix()
+        self.tobler_normalized_distance = self.env["tobler_normalized_distance"]
 
     def create_tensor(self):
         """
@@ -78,28 +77,3 @@ class ContinuousFeaturizer(Featurizer):
 
     def feature_names(self):
         return f"continuous distance {self.tobler_max_distance}"
-
-    def compute_distance_matrix(self):
-        if len(self.env["tobler_location_attr"]) == 2:
-            x, y = self.env["tobler_location_attr"]
-            sql_create_geom_table = f"""
-            SELECT _tid_, ST_MakePoint({x}::real, {y}::real) AS _geom_
-            FROM {self.ds.raw_data.name}
-            """
-            self.ds.engine.create_db_table_from_query(name=AuxTables.geom.name, query=sql_create_geom_table)
-            spatial_index_name = f"{AuxTables.geom.name}_idx"
-            self.ds.engine.create_spatial_db_index(name=spatial_index_name, table=AuxTables.geom.name, spatial_attr="_geom_")
-            self.ds.engine.cluster_db_using_index(table_name=AuxTables.geom.name, index_name=spatial_index_name)
-
-            sql_create_distance_matrix = f"""
-            SELECT t1._tid_ AS tid_1, t2._tid_ AS tid_2, ST_Distance(t1._geom_, t2._geom_) AS distance
-            FROM {AuxTables.geom.name} t1, {AuxTables.geom.name} t2
-            WHERE t1._tid_ <> t2._tid_
-              AND ST_DWithin(t1._geom_, t2._geom_, {self.tobler_max_distance})
-            """
-            self.ds.engine.create_db_table_from_query(name=AuxTables.distance_matrix.name, query=sql_create_distance_matrix)
-            distance_matrix_index_name = f"{AuxTables.distance_matrix.name}_idx"
-            self.ds.engine.create_db_index(name=distance_matrix_index_name, table=AuxTables.distance_matrix.name, attr_list=["tid_1", "distance"])
-            self.ds.engine.cluster_db_using_index(table_name=AuxTables.distance_matrix.name, index_name=distance_matrix_index_name)
-        else:
-            raise Exception("tobler_location_attr unsupported. ")
