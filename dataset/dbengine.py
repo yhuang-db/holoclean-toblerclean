@@ -69,7 +69,7 @@ class DBengine:
         result = conn.execute(query).fetchall()
         conn.close()
         toc = time.perf_counter()
-        logging.debug('Time to execute query: %.2f secs', toc-tic)
+        # logging.debug('Time to execute query: %.2f secs', toc-tic)
         return result
 
     def create_db_table_from_query(self, name, query):
