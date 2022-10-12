@@ -427,8 +427,9 @@ class Dataset:
         spatial_index_name = f'{AuxTables.geom.name}_idx'
         self.engine.create_spatial_db_index(name=spatial_index_name, table=AuxTables.geom.name, spatial_attr='_geom_')
         self.engine.cluster_db_using_index(table_name=AuxTables.geom.name, index_name=spatial_index_name)
+        logging.debug("DONE initializing geom table.")
 
-        # 2. create distance join table
+        # 2. create distance join domain table
         tobler_attr = self.env['tobler_attr']
         tobler_domain_distance = self.env['tobler_domain_distance']
         sql_create_distance_join_domain_table = f'''
@@ -442,6 +443,7 @@ class Dataset:
         distance_join_domain_index_name = f'{AuxTables.distance_join_domain.name}_idx'
         self.engine.create_db_index(name=distance_join_domain_index_name, table=AuxTables.distance_join_domain.name, attr_list=['_tid_'])
         self.engine.cluster_db_using_index(table_name=AuxTables.distance_join_domain.name, index_name=distance_join_domain_index_name)
+        logging.debug("DONE initializing distance join domain table.")
 
         # 3. create distance matrix
         if 'tobler_continuous_distance' in self.env:
@@ -449,7 +451,13 @@ class Dataset:
         elif 'tobler_discrete_distances' in self.env:
             tobler_max_distance = self.env["tobler_discrete_distances"][-1]
         else:
-            raise KeyError("No tobler_max_distance available. ")
+            # holoclean does not need distance matrix
+            logging.debug("No need for distance matrix table.")
+            toc = time.perf_counter()
+            total_time = toc - tic
+            status = "DONE generating tobler auxiliary tables"
+            return status, total_time
+
         sql_create_distance_matrix = f"""
         SELECT t1._tid_ AS tid_1, t2._tid_ AS tid_2, ST_Distance(t1._geom_, t2._geom_) AS distance
         FROM {AuxTables.geom.name} t1, {AuxTables.geom.name} t2
@@ -460,6 +468,7 @@ class Dataset:
         distance_matrix_index_name = f"{AuxTables.distance_matrix.name}_idx"
         self.engine.create_db_index(name=distance_matrix_index_name, table=AuxTables.distance_matrix.name, attr_list=["tid_1", "distance"])
         self.engine.cluster_db_using_index(table_name=AuxTables.distance_matrix.name, index_name=distance_matrix_index_name)
+        logging.debug("DONE initializing distance matrix table.")
 
         toc = time.perf_counter()
         total_time = toc - tic
