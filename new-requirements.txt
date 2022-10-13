@@ -1,0 +1,13 @@
+enum34
+gensim
+numpy
+pandas
+psycopg2-binary
+pyitlib
+pytest-xdist
+python-Levenshtein
+scikit-learn
+scipy
+sqlalchemy
+torch
+tqdm
