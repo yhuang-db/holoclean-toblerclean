@@ -41,9 +41,10 @@ class DomainEngine:
 
         # tobler
         self.tobler_domain = env['tobler_domain']
-        self.tobler_domain_distance = env['tobler_domain_distance']
-        self.tobler_attr = env['tobler_attr']
-        self.tobler_location_attr = env['tobler_location_attr']
+        if self.tobler_domain:
+            self.tobler_domain_distance = env['tobler_domain_distance']
+            self.tobler_attr = env['tobler_attr']
+            self.tobler_location_attr = env['tobler_location_attr']
 
     def setup(self):
         """
