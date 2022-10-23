@@ -1,4 +1,5 @@
 from functools import partial
+from math import sqrt
 from string import Template
 
 import torch
@@ -35,12 +36,20 @@ def gen_feat_tensor(violations, total_vars, classes):
     return tensor
 
 
+def get_equal_area_ring(r, n):
+    r = float(r)
+    return [sqrt((i + 1) * r * r / n) for i in range(n)]
+
+
 class DiscreteFeaturizer(Featurizer):
 
     def specific_setup(self):
         self.name = "1000 constraints featurizer"
         self.tobler_attr = self.env["tobler_attr"]
-        self.distances = self.env["tobler_discrete_distances"]
+        # self.distances = self.env["tobler_discrete_distances"]  disable explicit ring
+        self.max_ring = self.env["tobler_max_ring"]
+        self.ring_count = self.env["tobler_ring_count"]
+        self.distances = get_equal_area_ring(self.max_ring, self.ring_count)
 
     def fill_query_template(self, inner, outer):
         return template_ring_range_search.substitute(init_table=self.ds.raw_data.name,

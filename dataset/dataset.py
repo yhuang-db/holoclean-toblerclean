@@ -448,8 +448,8 @@ class Dataset:
         # 3. create distance matrix
         if 'tobler_continuous_distance' in self.env:
             tobler_max_distance = self.env['tobler_continuous_distance']
-        elif 'tobler_discrete_distances' in self.env:
-            tobler_max_distance = self.env["tobler_discrete_distances"][-1]
+        elif 'tobler_max_ring' in self.env:
+            tobler_max_distance = self.env["tobler_max_ring"]
         else:
             # holoclean does not need distance matrix
             logging.debug("No need for distance matrix table.")
