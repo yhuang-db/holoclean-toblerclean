@@ -32,7 +32,7 @@ class DetectEngine:
             errors.append(error_df)
 
         # Manual error
-        if self.env['manual_error']:
+        if 'error_dict' in self.env:
             errors = [pd.DataFrame.from_dict(self.env['error_dict'])]
 
         # Get unique errors only that might have been detected from multiple detectors.
