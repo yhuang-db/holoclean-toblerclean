@@ -21,6 +21,7 @@ class AuxTables(Enum):
     geom = 8
     distance_matrix = 9
     distance_join_domain = 10
+    weight_precomputation = 11
 
 
 class CellStatus(Enum):
@@ -437,6 +438,7 @@ class Dataset:
         FROM {AuxTables.geom.name} t1, {AuxTables.geom.name} t2
         WHERE ST_DWithin(t1._geom_, t2._geom_, {tobler_domain_distance})
           AND t1._tid_ <> t2._tid_
+          AND t2.{tobler_attr} <> \'_nan_\'
         GROUP BY t1._tid_
         '''
         self.engine.create_db_table_from_query(name=AuxTables.distance_join_domain.name, query=sql_create_distance_join_domain_table)
