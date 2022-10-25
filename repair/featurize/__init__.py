@@ -9,6 +9,7 @@ from .occurattrfeat import OccurAttrFeaturizer
 from .embeddingfeat import EmbeddingFeaturizer
 from .discretefeat import DiscreteFeaturizer
 from .continuousfeat import ContinuousFeaturizer
+from .contfreqfeat import ContFreqFeaturizer
 
 __all__ = ['ConstraintFeaturizer',
            'FeaturizedDataset',
@@ -20,5 +21,6 @@ __all__ = ['ConstraintFeaturizer',
            'OccurAttrFeaturizer',
            'EmbeddingFeaturizer',
            'DiscreteFeaturizer',
-           'ContinuousFeaturizer'
+           'ContinuousFeaturizer',
+           'ContFreqFeaturizer'
            ]
