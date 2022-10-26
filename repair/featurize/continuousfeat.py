@@ -76,4 +76,4 @@ class ContinuousFeaturizer(Featurizer):
         return tensor
 
     def feature_names(self):
-        return f"continuous distance {self.tobler_max_distance}"
+        return [f'Continuous Feature: {self.tobler_max_distance}:{self.tobler_normalized_distance}']
