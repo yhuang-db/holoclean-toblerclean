@@ -4,6 +4,7 @@ from string import Template
 import numpy as np
 import pandas as pd
 import torch
+from tqdm import tqdm
 
 from dataset import AuxTables
 from .featurizer import Featurizer
@@ -35,13 +36,14 @@ class ContFreqFeaturizer(Featurizer):
         logging.debug("Start computing local frequency...")
         self.freq_precomputation = self.freq_precompute()
         self.vid_set = set(self.freq_precomputation['vid'])
-        self.ds.generate_aux_table(aux_table=AuxTables.weight_precomputation, df=self.freq_precomputation, store=True)
+        # self.ds.generate_aux_table(aux_table=AuxTables.weight_precomputation, df=self.freq_precomputation, store=True)
+        self.freq_precomputation = self.freq_precomputation.set_index(['vid', 'domain_value'], drop=False)
         logging.debug("Done computing local frequency.")
 
     def create_tensor(self):
         query = f'SELECT _vid_, attribute, domain, init_index FROM {AuxTables.cell_domain.name} ORDER BY _vid_'
         results = self.ds.engine.execute_query(query)
-        tensors = [self.gen_feat_tensor(res, self.classes) for res in results]
+        tensors = [self.gen_feat_tensor(res, self.classes) for res in tqdm(results)]
         combined = torch.cat(tensors)
         return combined
 
@@ -51,6 +53,7 @@ class ContFreqFeaturizer(Featurizer):
     def freq_precompute(self):
         """
         for each cell of tobler_attr in domain, find its neighbors within tobler_continuous_distance
+        return dataframe (vid, domain_value, domain_value_weight)
         """
         query = template_range_search.substitute(
             tobler_attr=self.tobler_attr,
@@ -78,7 +81,6 @@ class ContFreqFeaturizer(Featurizer):
     def gen_feat_tensor(self, input, classes):
         tensor = torch.zeros(1, classes, self.attrs_number)
         vid = int(input[0])
-        print(f'vid: {vid}')
         attribute = input[1]
         domain = input[2].split('|||')
         init_index = input[3]
@@ -86,20 +88,17 @@ class ContFreqFeaturizer(Featurizer):
             return tensor
         else:
             attr_idx = self.ds.attr_to_idx[attribute]
-            domain_value_set = set(self.freq_precomputation.loc[self.freq_precomputation['vid'] == vid, 'domain_value'])
             for idx, val in enumerate(domain):
                 # if vid is not in precomputation,
                 # this means that vid does not have neighbor within search range,
                 # therefore, set init_value to 1 and leave rest to 0
                 if vid in self.vid_set:
+                    domain_value_set = set(self.freq_precomputation.loc[(vid,), 'domain_value'])
                     # if val is not in precomputation,
                     # this means that val is a random generated one
                     # therefore, set its freq to 0
                     if val in domain_value_set:
-                        freq = self.freq_precomputation.loc[
-                            (self.freq_precomputation['vid'] == vid) &
-                            (self.freq_precomputation['domain_value'] == val),
-                            'domain_value_weight'].values[0]
+                        freq = self.freq_precomputation.at[(vid, val), 'domain_value_weight']
                     else:
                         freq = 0
 
