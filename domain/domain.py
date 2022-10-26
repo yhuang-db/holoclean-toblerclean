@@ -40,11 +40,13 @@ class DomainEngine:
         self.pair_stats = {}
 
         # tobler
-        self.tobler_domain = env['tobler_domain']
-        if self.tobler_domain:
+        if 'tobler_domain_distance' in env:
+            self.tobler_domain = True
             self.tobler_domain_distance = env['tobler_domain_distance']
             self.tobler_attr = env['tobler_attr']
             self.tobler_location_attr = env['tobler_location_attr']
+        else:
+            self.tobler_domain = False
 
     def setup(self):
         """
@@ -200,7 +202,7 @@ class DomainEngine:
         for row in tqdm(list(records)):
             tid = row['_tid_']
             for attr in self.ds.get_active_attributes():
-                if self.tobler_domain and attr is self.tobler_attr:
+                if self.tobler_domain and attr == self.tobler_attr:
                     init_value, init_value_idx, dom = self.get_tobler_domain_cell(attr, row)
                 else:
                     init_value, init_value_idx, dom = self.get_domain_cell(attr, row)
@@ -512,7 +514,8 @@ class DomainEngine:
             domain = set()
         else:
             domain = set(result[0][0])
-        domain.add(init_value)
+        if init_value != NULL_REPR:  # don't add init_value if init_value is _nan_
+            domain.add(init_value)
         domain_lst = sorted(list(domain))
         init_value_idx = -1
         if init_value != NULL_REPR:
