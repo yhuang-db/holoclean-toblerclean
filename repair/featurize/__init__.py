@@ -7,9 +7,10 @@ from .initsimfeat import InitSimFeaturizer
 from .langmodelfeat import LangModelFeaturizer
 from .occurattrfeat import OccurAttrFeaturizer
 from .embeddingfeat import EmbeddingFeaturizer
-from .discretefeat import DiscreteFeaturizer
-from .continuousfeat import ContinuousFeaturizer
 from .contfreqfeat import ContFreqFeaturizer
+from .discfreqfeat import DiscFreqFeaturizer
+from .continuousfeat import ContinuousFeaturizer
+from .discretefeat import DiscreteFeaturizer
 
 __all__ = ['ConstraintFeaturizer',
            'FeaturizedDataset',
@@ -20,7 +21,8 @@ __all__ = ['ConstraintFeaturizer',
            'LangModelFeaturizer',
            'OccurAttrFeaturizer',
            'EmbeddingFeaturizer',
-           'DiscreteFeaturizer',
+           'ContFreqFeaturizer',
+           'DiscFreqFeaturizer',
            'ContinuousFeaturizer',
-           'ContFreqFeaturizer'
+           'DiscreteFeaturizer',
            ]
