@@ -23,19 +23,25 @@ template_range_search = Template(
 )
 
 
-def cal_weighted_violation(distance_list, norm_dist):
+def cal_weighted_violation(distance_list):
     """
     weight(d) = exp(-d) is WRONG !!!
+    weight(d) = exp(-d/1000)
 
+    Alternative:
     weight(d) = 2ND / (d + ND)
     ND: normalized distance
     weight(0) = 2
     weight(ND) = 1
     weight(+inf) = 0
-    """
-    na = np.array(distance_list)
+
     distance_weighted_count = np.multiply(np.reciprocal(na + norm_dist), 2 * norm_dist)
     return distance_weighted_count.sum()
+    """
+    na = np.array(distance_list)
+    na = na / 1000
+    exp_list = np.exp(np.negative(na))
+    return exp_list.sum()
 
 
 def gen_feat_tensor(violations, total_vars, classes):
@@ -55,7 +61,7 @@ class ContinuousFeaturizer(Featurizer):
         self.name = "ContinuousViolationFeaturizer"
         self.tobler_attr = self.env["tobler_attr"]
         self.tobler_max_distance = self.env["tobler_continuous_distance"]
-        self.tobler_normalized_distance = self.env["tobler_normalized_distance"]
+        # self.tobler_normalized_distance = self.env["tobler_normalized_distance"]
 
     def create_tensor(self):
         """
@@ -70,10 +76,12 @@ class ContinuousFeaturizer(Featurizer):
                                                  tobler_attr=self.tobler_attr,
                                                  radius=self.tobler_max_distance)
         result = self.ds.engine.execute_query(query)
-        weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2], self.tobler_normalized_distance)] for i in result]
+        weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2])] for i in result]
+        # weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2], self.tobler_normalized_distance)] for i in result]
         tensor = gen_feat_tensor(weighted_violations, self.total_vars, self.classes)
         tensor = F.normalize(tensor, p=2, dim=1)
         return tensor
 
     def feature_names(self):
-        return [f'Continuous Feature: {self.tobler_max_distance}:{self.tobler_normalized_distance}']
+        return [f'Continuous Feature: {self.tobler_max_distance}']
+        # return [f'Continuous Feature: {self.tobler_max_distance}:{self.tobler_normalized_distance}']
