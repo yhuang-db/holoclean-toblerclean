@@ -20,8 +20,6 @@ class AuxTables(Enum):
     inf_values_dom = 7
     geom = 8
     distance_matrix = 9
-    distance_join_domain = 10
-    weight_precomputation = 11
 
 
 class CellStatus(Enum):
@@ -421,51 +419,37 @@ class Dataset:
         tic = time.perf_counter()
         logging.debug("Generating tobler auxiliary tables...")
 
-        # 1. create geom table
+        # 1. create geom table: (*, _geom_)
         x, y = self.env['tobler_location_attr']
-        sql_create_geom_table = f'''SELECT *, ST_MakePoint({x}::real, {y}::real) AS _geom_ FROM {self.raw_data.name}'''
+        sql_create_geom_table = f'''
+        SELECT
+            *, 
+            ST_MakePoint({x}::real, {y}::real) AS _geom_ 
+        FROM {self.raw_data.name}
+        '''
         self.engine.create_db_table_from_query(name=AuxTables.geom.name, query=sql_create_geom_table)
         spatial_index_name = f'{AuxTables.geom.name}_idx'
         self.engine.create_spatial_db_index(name=spatial_index_name, table=AuxTables.geom.name, spatial_attr='_geom_')
         self.engine.cluster_db_using_index(table_name=AuxTables.geom.name, index_name=spatial_index_name)
         logging.debug("DONE initializing geom table.")
 
-        # 2. create distance join domain table
+        # 2. create distance matrix: (tid_1, val_1, tid_2, val_2, distance, weight)
         tobler_attr = self.env['tobler_attr']
-        tobler_domain_distance = self.env['tobler_domain_distance']
-        sql_create_distance_join_domain_table = f'''
-        SELECT t1._tid_, ARRAY_AGG(DISTINCT t2.{tobler_attr}) AS _domain_
-        FROM {AuxTables.geom.name} t1, {AuxTables.geom.name} t2
-        WHERE ST_DWithin(t1._geom_, t2._geom_, {tobler_domain_distance})
+        tobler_distance = self.env['tobler_distance']
+        sql_create_distance_matrix = f'''
+        SELECT
+            t1._tid_ AS tid_1,
+            t1.{tobler_attr} AS val_1,
+            t2._tid_ AS tid_2,
+            t2.{tobler_attr} AS val_2,
+            ST_Distance(t1._geom_, t2._geom_) AS distance,
+            exp(-ST_Distance(t1._geom_, t2._geom_) / 1000) as weight
+        FROM 
+            {AuxTables.geom.name} t1, 
+            {AuxTables.geom.name} t2
+        WHERE ST_DWithin(t1._geom_, t2._geom_, {tobler_distance})
           AND t1._tid_ <> t2._tid_
-          AND t2.{tobler_attr} <> \'_nan_\'
-        GROUP BY t1._tid_
         '''
-        self.engine.create_db_table_from_query(name=AuxTables.distance_join_domain.name, query=sql_create_distance_join_domain_table)
-        distance_join_domain_index_name = f'{AuxTables.distance_join_domain.name}_idx'
-        self.engine.create_db_index(name=distance_join_domain_index_name, table=AuxTables.distance_join_domain.name, attr_list=['_tid_'])
-        self.engine.cluster_db_using_index(table_name=AuxTables.distance_join_domain.name, index_name=distance_join_domain_index_name)
-        logging.debug("DONE initializing distance join domain table.")
-
-        # 3. create distance matrix
-        if 'tobler_continuous_distance' in self.env:
-            tobler_max_distance = self.env['tobler_continuous_distance']
-        elif 'tobler_discrete_distances' in self.env:
-            tobler_max_distance = self.env["tobler_discrete_distances"][-1]
-        else:
-            # holoclean does not need distance matrix
-            logging.debug("No need for distance matrix table.")
-            toc = time.perf_counter()
-            total_time = toc - tic
-            status = "DONE generating tobler auxiliary tables"
-            return status, total_time
-
-        sql_create_distance_matrix = f"""
-        SELECT t1._tid_ AS tid_1, t2._tid_ AS tid_2, ST_Distance(t1._geom_, t2._geom_) AS distance
-        FROM {AuxTables.geom.name} t1, {AuxTables.geom.name} t2
-        WHERE ST_DWithin(t1._geom_, t2._geom_, {tobler_max_distance})
-          AND t1._tid_ <> t2._tid_
-        """
         self.engine.create_db_table_from_query(name=AuxTables.distance_matrix.name, query=sql_create_distance_matrix)
         distance_matrix_index_name = f"{AuxTables.distance_matrix.name}_idx"
         self.engine.create_db_index(name=distance_matrix_index_name, table=AuxTables.distance_matrix.name, attr_list=["tid_1", "distance"])
