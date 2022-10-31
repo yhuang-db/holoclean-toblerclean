@@ -60,7 +60,7 @@ class ContinuousFeaturizer(Featurizer):
     def specific_setup(self):
         self.name = "ContinuousViolationFeaturizer"
         self.tobler_attr = self.env["tobler_attr"]
-        self.tobler_max_distance = self.env["tobler_continuous_distance"]
+        self.tobler_max_distance = self.env["tobler_distance"]
         # self.tobler_normalized_distance = self.env["tobler_normalized_distance"]
 
     def create_tensor(self):
