@@ -40,11 +40,11 @@ class DomainEngine:
         self.pair_stats = {}
 
         # tobler
-        if 'tobler_domain_distance' in env:
-            self.tobler_domain = True
-            self.tobler_domain_distance = env['tobler_domain_distance']
+        if 'tobler_domain' in env:
+            self.tobler_domain = env['tobler_domain']
             self.tobler_attr = env['tobler_attr']
             self.tobler_location_attr = env['tobler_location_attr']
+            self.tobler_domain_distance = env['tobler_distance']
         else:
             self.tobler_domain = False
 
@@ -509,11 +509,17 @@ class DomainEngine:
     def get_tobler_domain_cell(self, attr, row):
         tid = row['_tid_']
         init_value = row[attr]
-        result = self.ds.engine.execute_query(f'SELECT _domain_ FROM {AuxTables.distance_join_domain.name} WHERE _tid_ = {tid}')
+        result = self.ds.engine.execute_query(f'''
+        SELECT 
+            tid_1, 
+            ARRAY_AGG(DISTINCT val_2) AS domain 
+        FROM {AuxTables.distance_matrix.name} 
+        WHERE tid_1 = {tid}
+        GROUP BY tid_1''')
         if len(result) == 0:
             domain = set()
         else:
-            domain = set(result[0][0])
+            domain = set(result[0][1])
         if init_value != NULL_REPR:  # don't add init_value if init_value is _nan_
             domain.add(init_value)
         domain_lst = sorted(list(domain))
