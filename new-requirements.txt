@@ -11,3 +11,4 @@ scipy
 sqlalchemy
 torch
 tqdm
+duckdb
