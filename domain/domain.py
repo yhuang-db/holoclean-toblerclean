@@ -41,6 +41,7 @@ class DomainEngine:
 
         # tobler
         if 'tobler_domain' in env:
+            logging.debug("TOBLER: tobler_domain is True, generate tobler domain")
             self.tobler_domain = env['tobler_domain']
             self.tobler_attr = env['tobler_attr']
             self.tobler_location_attr = env['tobler_location_attr']
