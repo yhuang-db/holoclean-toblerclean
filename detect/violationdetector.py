@@ -1,3 +1,4 @@
+import logging
 from string import Template
 
 import pandas as pd
@@ -57,11 +58,12 @@ class ViolationDetector(Detector):
             errors_df = pd.concat(errors, ignore_index=True)
             if errors_df.shape[0]:
                 errors_df = errors_df.drop_duplicates().reset_index(drop=True)
+        logging.debug(f"ViolationDetector: detect f{len(errors_df)} errors")
         return errors_df
 
     def to_sql(self, tbl, c):
         # Check tuples in constraint
-        unary = len(c.tuple_names)==1
+        unary = len(c.tuple_names) == 1
         if unary:
             query = self.gen_unary_query(tbl, c)
         else:

@@ -1,7 +1,9 @@
+import logging
+
 import pandas as pd
 
-from .detector import Detector
 from utils import NULL_REPR
+from .detector import Detector
 
 
 class NullDetector(Detector):
@@ -33,5 +35,5 @@ class NullDetector(Detector):
             errors.append(tmp_df)
 
         errors_df = pd.concat(errors, ignore_index=True)
+        logging.debug(f"NULLDetector: detect {len(errors_df)} errors")
         return errors_df
-
