@@ -516,6 +516,7 @@ class DomainEngine:
             ARRAY_AGG(DISTINCT val_2) AS domain 
         FROM {AuxTables.distance_matrix.name} 
         WHERE tid_1 = {tid}
+          AND val_2 <> '{NULL_REPR}'
         GROUP BY tid_1''')
         if len(result) == 0:
             domain = set()
