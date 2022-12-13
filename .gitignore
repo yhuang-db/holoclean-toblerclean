@@ -25,3 +25,8 @@ info/
 
 # Holoclean specific files
 debug/
+
+# Toblerclean
+venv/
+516_reset_pg_db_user.sh
+reset_pg_db_user.sh
