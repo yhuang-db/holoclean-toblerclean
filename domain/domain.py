@@ -55,6 +55,10 @@ class DomainEngine:
         'cell_domain', 'pos_values').
         """
         tic = time.time()
+        # start of tobler
+        self.init_tobler_domain_dict()
+        print('break')
+        # end of tobler
 
         if self.correlations is None:
             self.compute_correlations()
@@ -510,14 +514,7 @@ class DomainEngine:
     def get_tobler_domain_cell(self, attr, row):
         tid = row['_tid_']
         init_value = row[attr]
-        result = self.ds.engine.execute_query(f'''
-        SELECT 
-            tid_1, 
-            ARRAY_AGG(DISTINCT val_2) AS domain 
-        FROM {AuxTables.distance_matrix.name} 
-        WHERE tid_1 = {tid}
-          AND val_2 <> '{NULL_REPR}'
-        GROUP BY tid_1''')
+        result = self.domain_dict[tid]
         if len(result) == 0:
             domain = set()
         else:
@@ -529,3 +526,15 @@ class DomainEngine:
         if init_value != NULL_REPR:
             init_value_idx = domain_lst.index(init_value)
         return init_value, init_value_idx, domain_lst
+
+    def init_tobler_domain_dict(self):
+        self.domain_dict = {}
+        sql = f'''
+        SELECT tid_1,  ARRAY_AGG(DISTINCT val_2) AS domain
+        FROM {AuxTables.distance_matrix.name}
+        WHERE val_2 <> '{NULL_REPR}'
+        GROUP BY tid_1
+        '''
+        result = self.ds.engine.execute_query(sql)
+        for r in result:
+            self.domain_dict[r[0]] = r[1]
