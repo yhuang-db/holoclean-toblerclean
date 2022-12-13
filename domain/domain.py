@@ -40,7 +40,7 @@ class DomainEngine:
         self.pair_stats = {}
 
         # tobler
-        if 'tobler_domain' in env:
+        if 'tobler_domain' in env and env['tobler_domain']:
             logging.debug("TOBLER: tobler_domain is True, generate tobler domain")
             self.tobler_domain = env['tobler_domain']
             self.tobler_attr = env['tobler_attr']
