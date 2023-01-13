@@ -25,3 +25,19 @@ info/
 
 # Holoclean specific files
 debug/
+
+# Toblerclean
+venv/
+516_reset_pg_db_user.sh
+reset_pg_db_user.sh
+testdata/*
+!testdata/adult/
+!testdata/flight/
+!testdata/hospital
+!testdata/met
+testdata/hospital/add_a_correct_column.ipynb
+testdata/hospital/hospital_18c.csv
+testdata/hospital/hospital_18c_clean.csv
+examples/*.py
+!examples/holoclean_repair_example.py
+!examples/holoclean_repair_example_db.py
