@@ -41,7 +41,7 @@ class DomainEngine:
 
         # tobler
         if 'tobler_domain' in env and env['tobler_domain']:
-            logging.debug("TOBLER: tobler_domain is True, generate tobler domain")
+            logging.debug("\n TOBLER: tobler_domain is True, generate tobler domain \n")
             self.tobler_domain = env['tobler_domain']
             self.tobler_attr = env['tobler_attr']
             self.tobler_location_attr = env['tobler_location_attr']
@@ -56,8 +56,11 @@ class DomainEngine:
         """
         tic = time.time()
         # start of tobler
-        self.init_tobler_domain_dict()
-        print('break')
+        if self.tobler_domain:
+            logging.debug("\n DO Tobler domain \n")
+            self.init_tobler_domain_dict()
+        else:
+            logging.debug("\n NOT DO Tobler domain \n")
         # end of tobler
 
         if self.correlations is None:
