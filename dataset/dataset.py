@@ -434,6 +434,25 @@ class Dataset:
         logging.debug("DONE initializing geom table.")
 
         # 2. create distance matrix: (tid_1, val_1, tid_2, val_2, distance, weight)
+        if 'tobler_distance' in self.env:
+            sql_create_distance_matrix = self.gen_range_neighbor_sql()
+        elif 'tobler_knn' in self.env:
+            sql_create_distance_matrix = self.gen_knn_neighbor_sql()
+        else:
+            raise Exception("tobler_distance or tobler_knn must be specified in the environment")
+
+        self.engine.create_db_table_from_query(name=AuxTables.distance_matrix.name, query=sql_create_distance_matrix)
+        distance_matrix_index_name = f"{AuxTables.distance_matrix.name}_idx"
+        self.engine.create_db_index(name=distance_matrix_index_name, table=AuxTables.distance_matrix.name, attr_list=["tid_1", "distance"])
+        self.engine.cluster_db_using_index(table_name=AuxTables.distance_matrix.name, index_name=distance_matrix_index_name)
+        logging.debug("DONE initializing distance matrix table.")
+
+        toc = time.perf_counter()
+        total_time = toc - tic
+        status = "DONE generating tobler auxiliary tables"
+        return status, total_time
+
+    def gen_range_neighbor_sql(self):
         tobler_attr = self.env['tobler_attr']
         tobler_distance = self.env['tobler_distance']
         sql_create_distance_matrix = f'''
@@ -450,13 +469,32 @@ class Dataset:
         WHERE ST_DWithin(t1._geom_, t2._geom_, {tobler_distance})
           AND t1._tid_ <> t2._tid_
         '''
-        self.engine.create_db_table_from_query(name=AuxTables.distance_matrix.name, query=sql_create_distance_matrix)
-        distance_matrix_index_name = f"{AuxTables.distance_matrix.name}_idx"
-        self.engine.create_db_index(name=distance_matrix_index_name, table=AuxTables.distance_matrix.name, attr_list=["tid_1", "distance"])
-        self.engine.cluster_db_using_index(table_name=AuxTables.distance_matrix.name, index_name=distance_matrix_index_name)
-        logging.debug("DONE initializing distance matrix table.")
+        return sql_create_distance_matrix
 
-        toc = time.perf_counter()
-        total_time = toc - tic
-        status = "DONE generating tobler auxiliary tables"
-        return status, total_time
+    def gen_knn_neighbor_sql(self):
+        tobler_attr = self.env['tobler_attr']
+        tobler_k = self.env['tobler_knn']
+        sql_create_distance_matrix = f'''
+        SELECT
+            t1._tid_ AS tid_1,
+            t1.{tobler_attr} AS val_1,
+            t2._tid_ AS tid_2,
+            t2.{tobler_attr} AS val_2,
+            t2.dist AS distance,
+            exp(t2.dist/ 1000) as weight
+        FROM
+            {AuxTables.geom.name} AS t1
+            CROSS JOIN LATERAL (
+                SELECT
+                    _tid_,
+                    {tobler_attr},
+                    t1._geom_ <-> t2._geom_ AS dist
+                FROM
+                    {AuxTables.geom.name} t2
+                WHERE
+                    t1._tid_ <> t2._tid_
+                ORDER BY dist
+                LIMIT {tobler_k}) AS t2
+        ORDER BY dist DESC
+        '''
+        return sql_create_distance_matrix
