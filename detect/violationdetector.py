@@ -58,7 +58,7 @@ class ViolationDetector(Detector):
             errors_df = pd.concat(errors, ignore_index=True)
             if errors_df.shape[0]:
                 errors_df = errors_df.drop_duplicates().reset_index(drop=True)
-        logging.debug(f"ViolationDetector: detect {len(errors_df)} errors")
+            logging.debug(f"ViolationDetector: detect {len(errors_df)} errors")
         return errors_df
 
     def to_sql(self, tbl, c):
