@@ -29,6 +29,7 @@ debug/
 # Toblerclean
 .vscode/
 venv/
+setup_venv.sh
 516_reset_pg_db_user.sh
 reset_pg_db_user.sh
 testdata/*
