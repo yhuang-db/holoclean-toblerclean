@@ -22,6 +22,19 @@ template_range_search = Template(
     '''
 )
 
+template_from_distance_matrix = Template(
+    '''
+    SELECT _vid_, val_id, array_agg(t4.weight) AS weights
+      FROM $init_table AS t1, $init_table as t2, $pos_values AS t3, $distance_matrix as t4
+     WHERE t1._tid_ <> t2._tid_
+       AND t1._tid_ = t3._tid_
+       AND t3.attribute = \'$tobler_attr\'
+       AND t3.rv_val::TEXT <> t2.$tobler_attr
+       AND t1._tid_ = t4.tid_1
+       AND t2._tid_ = t4.tid_2
+    '''
+)
+
 
 def cal_weighted_violation(distance_list):
     """
@@ -60,7 +73,7 @@ class ContinuousFeaturizer(Featurizer):
     def specific_setup(self):
         self.name = "ContinuousViolationFeaturizer"
         self.tobler_attr = self.env["tobler_attr"]
-        self.tobler_max_distance = self.env["tobler_distance"]
+        # self.tobler_max_distance = self.env["tobler_distance"]
         # self.tobler_normalized_distance = self.env["tobler_normalized_distance"]
 
     def create_tensor(self):
@@ -83,5 +96,8 @@ class ContinuousFeaturizer(Featurizer):
         return tensor
 
     def feature_names(self):
-        return [f'Continuous Feature: {self.tobler_max_distance}']
+        if 'tobler_distance' in self.env:
+            return [f'Continuous Feature by range: {self.tobler_max_distance}']
+        elif 'tobler_knn' in self.env:
+            return [f'Continuous Feature by knn: {self.tobler_knn}']
         # return [f'Continuous Feature: {self.tobler_max_distance}:{self.tobler_normalized_distance}']
