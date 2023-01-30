@@ -481,7 +481,7 @@ class Dataset:
             t2._tid_ AS tid_2,
             t2.{tobler_attr} AS val_2,
             t2.dist AS distance,
-            exp(t2.dist/ 1000) as weight
+            exp(-t2.dist/ 1000) as weight
         FROM
             {AuxTables.geom.name} AS t1
             CROSS JOIN LATERAL (
