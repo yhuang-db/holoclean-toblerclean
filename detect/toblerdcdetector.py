@@ -31,15 +31,15 @@ class ToblerDCDetector(Detector):
         FROM (
           SELECT tid_1 AS tid
           FROM {AuxTables.distance_matrix.name}
-          WHERE val_1 <> {NULL_REPR}
-            AND val_2 <> {NULL_REPR}
+          WHERE val_1 <> '{NULL_REPR}'
+            AND val_2 <> '{NULL_REPR}'
             AND val_1 <> val_2
             AND tid_1 <> tid_2
           UNION
           SELECT tid_2 AS tid
           FROM {AuxTables.distance_matrix.name}
-          WHERE val_1 <> {NULL_REPR}
-            AND val_2 <> {NULL_REPR}
+          WHERE val_1 <> '{NULL_REPR}'
+            AND val_2 <> '{NULL_REPR}'
             AND val_1 <> val_2
             AND tid_1 <> tid_2) t
         ORDER BY tid
