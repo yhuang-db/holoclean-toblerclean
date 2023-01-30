@@ -2,6 +2,7 @@ import pandas as pd
 
 from dataset import AuxTables
 from .detector import Detector
+from utils import NULL_REPR
 
 
 class ToblerDCDetector(Detector):
@@ -12,7 +13,6 @@ class ToblerDCDetector(Detector):
     def setup(self, dataset, env):
         self.ds = dataset
         self.tobler_attr = env['tobler_attr']
-        self.tobler_distance = env['tobler_distance']
 
     def detect_noisy_cells(self):
         """
@@ -27,20 +27,21 @@ class ToblerDCDetector(Detector):
         Two cells within ToblerDistance has different value
         """
         sql = f'''
-        SELECT tid
+        SELECT DISTINCT tid
         FROM (
           SELECT tid_1 AS tid
           FROM {AuxTables.distance_matrix.name}
-          WHERE val_1 <> '_nan_'
+          WHERE val_1 <> {NULL_REPR}
+            AND val_2 <> {NULL_REPR}
             AND val_1 <> val_2
             AND tid_1 <> tid_2
-          INTERSECT
+          UNION
           SELECT tid_2 AS tid
           FROM {AuxTables.distance_matrix.name}
-          WHERE val_1 <> '_nan_'
+          WHERE val_1 <> {NULL_REPR}
+            AND val_2 <> {NULL_REPR}
             AND val_1 <> val_2
-            AND tid_1 <> tid_2
-        ) t
+            AND tid_1 <> tid_2) t
         ORDER BY tid
         '''
         result = self.ds.engine.execute_query(sql)
