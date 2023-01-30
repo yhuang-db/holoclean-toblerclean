@@ -512,3 +512,6 @@ class Session:
         status, load_time = self.ds.init_tobler_table()
         logging.info(status)
         logging.debug('Time to init tobler auxiliary tables: %.2f secs', load_time)
+
+    def run_tobler_estimator(self):
+        self.domain_engine.run_tobler_estimator()

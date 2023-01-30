@@ -540,3 +540,55 @@ class DomainEngine:
         result = self.ds.engine.execute_query(sql)
         for r in result:
             self.domain_dict[r[0]] = r[1]
+
+    def run_tobler_estimator(self):
+        self.domain_df = self._run_tobler_estimator_()
+        self.store_domains(self.domain_df)
+
+    def _run_tobler_estimator_(self):
+        """
+        For every tuple in init cell_domain, join with distance_matrix for weak label
+        """
+
+        # do weak label
+        if 'tobler_knn' in self.env:
+            self.knn_estimator_threshold = self.env['tobler_knn'] - 1
+        else:
+            raise Exception('Tobler_estimator require tobler_knn')
+
+        sql = f'''
+        SELECT
+          c._tid_,
+          d.val_2 AS weak_label
+        FROM
+          {AuxTables.cell_domain.name} c,
+          {AuxTables.distance_matrix.name} d
+        WHERE
+          c._tid_ = d.tid_1
+          AND c.is_dk = TRUE
+          AND c.fixed <> {CellStatus.SINGLE_VALUE.value}
+          AND d.distance = 0
+          AND val_2 IS NOT NULL
+        GROUP BY
+          c._tid_,
+          d.val_2
+        HAVING
+          count(DISTINCT d.tid_2) >= {self.knn_estimator_threshold};
+        '''
+
+        result = self.ds.engine.execute_query(sql)
+        logging.debug(f'TOBLER: Simple tobler estimator generate {len(result)} weak labels')
+
+        for res in tqdm(result):
+            tid = res[0]
+            weak_label = res[1]
+            row_idx = self.domain_df.index[self.domain_df['_tid_'] == tid][0]
+            domains = self.domain_df.at[row_idx, 'domain'].split('|||')
+            weak_label_idx = domains.index(weak_label)
+
+            self.domain_df.at[row_idx, 'weak_label'] = weak_label
+            self.domain_df.at[row_idx, 'weak_label_idx'] = weak_label_idx
+            self.domain_df.at[row_idx, 'fixed'] = CellStatus.WEAK_LABEL.value
+
+        logging.debug('TOBLER: DONE generating weak labels')
+        return self.domain_df
