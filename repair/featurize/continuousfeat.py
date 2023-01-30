@@ -1,26 +1,10 @@
 from string import Template
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 
 from dataset import AuxTables
 from .featurizer import Featurizer
-
-template_range_search = Template(
-    '''
-    SELECT _vid_, val_id, array_agg(t4.distance) AS distances
-      FROM $init_table AS t1, $init_table as t2, $pos_values AS t3, $distance_matrix as t4
-     WHERE t1._tid_ <> t2._tid_
-       AND t1._tid_ = t3._tid_
-       AND t3.attribute = \'$tobler_attr\'
-       AND t3.rv_val::TEXT <> t2.$tobler_attr
-       AND t1._tid_ = t4.tid_1
-       AND t2._tid_ = t4.tid_2
-       AND t4.distance < $radius
-    GROUP BY _vid_, val_id;
-    '''
-)
 
 template_from_distance_matrix = Template(
     '''
@@ -32,29 +16,30 @@ template_from_distance_matrix = Template(
        AND t3.rv_val::TEXT <> t2.$tobler_attr
        AND t1._tid_ = t4.tid_1
        AND t2._tid_ = t4.tid_2
+    GROUP BY _vid_, val_id;
     '''
 )
 
 
-def cal_weighted_violation(distance_list):
-    """
-    weight(d) = exp(-d) is WRONG !!!
-    weight(d) = exp(-d/1000)
-
-    Alternative:
-    weight(d) = 2ND / (d + ND)
-    ND: normalized distance
-    weight(0) = 2
-    weight(ND) = 1
-    weight(+inf) = 0
-
-    distance_weighted_count = np.multiply(np.reciprocal(na + norm_dist), 2 * norm_dist)
-    return distance_weighted_count.sum()
-    """
-    na = np.array(distance_list)
-    na = na / 1000
-    exp_list = np.exp(np.negative(na))
-    return exp_list.sum()
+# def cal_weighted_violation(distance_list):
+#     """
+#     weight(d) = exp(-d) is WRONG !!!
+#     weight(d) = exp(-d/1000)
+#
+#     Alternative:
+#     weight(d) = 2ND / (d + ND)
+#     ND: normalized distance
+#     weight(0) = 2
+#     weight(ND) = 1
+#     weight(+inf) = 0
+#
+#     distance_weighted_count = np.multiply(np.reciprocal(na + norm_dist), 2 * norm_dist)
+#     return distance_weighted_count.sum()
+#     """
+#     na = np.array(distance_list)
+#     na = na / 1000
+#     exp_list = np.exp(np.negative(na))
+#     return exp_list.sum()
 
 
 def gen_feat_tensor(violations, total_vars, classes):
@@ -73,8 +58,10 @@ class ContinuousFeaturizer(Featurizer):
     def specific_setup(self):
         self.name = "ContinuousViolationFeaturizer"
         self.tobler_attr = self.env["tobler_attr"]
-        # self.tobler_max_distance = self.env["tobler_distance"]
-        # self.tobler_normalized_distance = self.env["tobler_normalized_distance"]
+        if 'tobler_distance' in self.env:
+            self.tobler_distance = self.env['tobler_distance']
+        elif 'tobler_knn' in self.env:
+            self.tobler_knn = self.env['tobler_knn']
 
     def create_tensor(self):
         """
@@ -83,13 +70,19 @@ class ContinuousFeaturizer(Featurizer):
 
         :return: PyTorch Tensor
         """
-        query = template_range_search.substitute(init_table=self.ds.raw_data.name,
-                                                 pos_values=AuxTables.pos_values.name,
-                                                 distance_matrix=AuxTables.distance_matrix.name,
-                                                 tobler_attr=self.tobler_attr,
-                                                 radius=self.tobler_max_distance)
+
+        query = template_from_distance_matrix.substitute(
+            init_table=self.ds.raw_data.name,
+            pos_values=AuxTables.pos_values.name,
+            distance_matrix=AuxTables.distance_matrix.name,
+            tobler_attr=self.tobler_attr
+        )
+
+        print('\nBefore execute\n')
         result = self.ds.engine.execute_query(query)
-        weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2])] for i in result]
+        print('\nAfter execute\n')
+        weighted_violations = [[i[0], i[1], sum(i[2])] for i in result]
+        # weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2])] for i in result]
         # weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2], self.tobler_normalized_distance)] for i in result]
         tensor = gen_feat_tensor(weighted_violations, self.total_vars, self.classes)
         tensor = F.normalize(tensor, p=2, dim=1)
@@ -97,7 +90,7 @@ class ContinuousFeaturizer(Featurizer):
 
     def feature_names(self):
         if 'tobler_distance' in self.env:
-            return [f'Continuous Feature by range: {self.tobler_max_distance}']
+            return [f'Continuous Feature by range: {self.tobler_distance}']
         elif 'tobler_knn' in self.env:
             return [f'Continuous Feature by knn: {self.tobler_knn}']
         # return [f'Continuous Feature: {self.tobler_max_distance}:{self.tobler_normalized_distance}']
