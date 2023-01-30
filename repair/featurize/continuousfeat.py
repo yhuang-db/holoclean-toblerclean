@@ -78,9 +78,7 @@ class ContinuousFeaturizer(Featurizer):
             tobler_attr=self.tobler_attr
         )
 
-        print('\nBefore execute\n')
         result = self.ds.engine.execute_query(query)
-        print('\nAfter execute\n')
         weighted_violations = [[i[0], i[1], sum(i[2])] for i in result]
         # weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2])] for i in result]
         # weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2], self.tobler_normalized_distance)] for i in result]
