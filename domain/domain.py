@@ -520,7 +520,7 @@ class DomainEngine:
         if len(result) == 0:
             domain = set()
         else:
-            domain = set(result[0][1])
+            domain = set(result)
         if init_value != NULL_REPR:  # don't add init_value if init_value is _nan_
             domain.add(init_value)
         domain_lst = sorted(list(domain))
