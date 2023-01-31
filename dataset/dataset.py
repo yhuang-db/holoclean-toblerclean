@@ -420,11 +420,10 @@ class Dataset:
         logging.debug("Generating tobler auxiliary tables...")
 
         # 1. create geom table: (*, _geom_)
-        x, y = self.env['tobler_location_attr']
         sql_create_geom_table = f'''
         SELECT
             *, 
-            ST_MakePoint({x}::real, {y}::real) AS _geom_ 
+            ST_MakePoint(x::real, y::real) AS _geom_ 
         FROM {self.raw_data.name}
         '''
         self.engine.create_db_table_from_query(name=AuxTables.geom.name, query=sql_create_geom_table)

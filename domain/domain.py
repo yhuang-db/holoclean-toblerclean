@@ -44,7 +44,6 @@ class DomainEngine:
             logging.debug("\n TOBLER: tobler_domain is True, generate tobler domain \n")
             self.tobler_domain = env['tobler_domain']
             self.tobler_attr = env['tobler_attr']
-            self.tobler_location_attr = env['tobler_location_attr']
         else:
             self.tobler_domain = False
 
