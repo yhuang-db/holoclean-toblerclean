@@ -1,8 +1,10 @@
+import logging
+
 import pandas as pd
 
 from dataset import AuxTables
-from .detector import Detector
 from utils import NULL_REPR
+from .detector import Detector
 
 
 class ToblerDCDetector(Detector):
@@ -49,4 +51,5 @@ class ToblerDCDetector(Detector):
         error_dict = {'_tid_': [i[0] for i in result]}
         df_error = pd.DataFrame(error_dict)
         df_error['attribute'] = self.tobler_attr
+        logging.debug(f"ToblerDCDetector: detect {len(df_error)} errors")
         return df_error
