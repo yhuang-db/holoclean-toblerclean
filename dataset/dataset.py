@@ -492,8 +492,8 @@ class Dataset:
                     {AuxTables.geom.name} t2
                 WHERE
                     t1._tid_ <> t2._tid_
+                    AND t2.{tobler_attr} <> '{NULL_REPR}'
                 ORDER BY dist
                 LIMIT {tobler_k}) AS t2
-        ORDER BY dist DESC
         '''
         return sql_create_distance_matrix
