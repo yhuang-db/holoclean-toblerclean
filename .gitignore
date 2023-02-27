@@ -29,7 +29,7 @@ debug/
 # Toblerclean
 .vscode/
 venv/
-setup_venv.sh
+init_venv.sh
 516_reset_pg_db_user.sh
 reset_pg_db_user.sh
 testdata/*
@@ -43,4 +43,3 @@ testdata/hospital/hospital_18c_clean.csv
 examples/*.py
 !examples/holoclean_repair_example.py
 !examples/holoclean_repair_example_db.py
-post_eval.py
