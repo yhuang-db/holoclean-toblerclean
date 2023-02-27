@@ -11,4 +11,3 @@ scipy
 sqlalchemy==1.4.46
 torch
 tqdm
-
