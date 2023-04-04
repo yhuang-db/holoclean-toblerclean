@@ -3,11 +3,15 @@ from .detector import Detector
 from .nulldetector import NullDetector
 from .violationdetector import ViolationDetector
 from .errorloaderdetector import ErrorsLoaderDetector
-from .toblerdetector import ToblerDetector
 from .toblerdcdetector import ToblerDCDetector
 from .manual_error import ManualError
 
 __all__ = [
-    'DetectEngine', 'Detector', 'NullDetector', 'ViolationDetector',
-    'ErrorsLoaderDetector', 'ToblerDetector', 'ToblerDCDetector', 'ManualError'
+    'DetectEngine',
+    'Detector',
+    'NullDetector',
+    'ViolationDetector',
+    'ErrorsLoaderDetector',
+    'ToblerDCDetector',
+    'ManualError'
 ]
