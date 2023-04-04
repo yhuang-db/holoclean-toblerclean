@@ -66,6 +66,7 @@ class DBengine:
         """
         tic = time.perf_counter()
         conn = self.engine.connect()
+        query = sql.text(query)
         result = conn.execute(query).fetchall()
         conn.close()
         toc = time.perf_counter()
@@ -76,10 +77,11 @@ class DBengine:
         tic = time.perf_counter()
         drop = drop_table_template.substitute(table=name)
         create = create_table_template.substitute(table=name, stmt=query)
-        conn = self.engine.connect()
-        conn.execute(drop)
-        conn.execute(create)
-        conn.close()
+        with self.engine.begin() as conn:
+            drop = sql.text(drop)
+            create = sql.text(create)
+            conn.execute(drop)
+            conn.execute(create)
         toc = time.perf_counter()
         logging.debug('Time to create table: %.2f secs', toc-tic)
         return True
@@ -98,9 +100,9 @@ class DBengine:
         quoted_attrs = map(lambda attr: '"{}"'.format(attr), attr_list)
         stmt = index_template.substitute(idx_title=name, table=table, attrs=','.join(quoted_attrs))
         tic = time.perf_counter()
-        conn = self.engine.connect()
-        result = conn.execute(stmt)
-        conn.close()
+        with self.engine.begin() as conn:
+            stmt = sql.text(stmt)
+            result = conn.execute(stmt)
         toc = time.perf_counter()
         logging.debug('Time to create index: %.2f secs', toc-tic)
         return result
@@ -119,9 +121,9 @@ class DBengine:
         s_attr = f'"{spatial_attr}"'
         sql_create_gist = create_gist_index_template.substitute(idx_title=name, table=table, spatial_attr=s_attr)
         tic = time.perf_counter()
-        conn = self.engine.connect()
-        result = conn.execute(sql_create_gist)
-        conn.close()
+        with self.engine.begin() as conn:
+            sql_create_gist = sql.text(sql_create_gist)
+            result = conn.execute(sql_create_gist)
         toc = time.perf_counter()
         logging.debug('Time to create spatial index: %.2f secs', toc - tic)
         return result
@@ -129,9 +131,9 @@ class DBengine:
     def cluster_db_using_index(self, table_name, index_name):
         sql_cluster = cluster_table_on_index_template.substitute(idx_title=index_name, table=table_name)
         tic = time.perf_counter()
-        conn = self.engine.connect()
-        result = conn.execute(sql_cluster)
-        conn.close()
+        with self.engine.begin() as conn:
+            sql_cluster = sql.text(sql_cluster)
+            result = conn.execute(sql_cluster)
         toc = time.perf_counter()
         logging.debug('Time to cluster table on index: %.2f secs', toc - tic)
         return result
