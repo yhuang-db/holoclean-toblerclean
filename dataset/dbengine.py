@@ -64,6 +64,7 @@ class DBengine:
         """
         tic = time.perf_counter()
         conn = self.engine.connect()
+        query = sql.text(query)
         result = conn.execute(query).fetchall()
         conn.close()
         toc = time.perf_counter()
@@ -74,10 +75,11 @@ class DBengine:
         tic = time.perf_counter()
         drop = drop_table_template.substitute(table=name)
         create = create_table_template.substitute(table=name, stmt=query)
-        conn = self.engine.connect()
-        conn.execute(drop)
-        conn.execute(create)
-        conn.close()
+        drop = sql.text(drop)
+        create = sql.text(create)
+        with self.engine.begin() as conn:
+            conn.execute(drop)
+            conn.execute(create)
         toc = time.perf_counter()
         logging.debug('Time to create table: %.2f secs', toc-tic)
         return True
@@ -96,9 +98,9 @@ class DBengine:
         quoted_attrs = map(lambda attr: '"{}"'.format(attr), attr_list)
         stmt = index_template.substitute(idx_title=name, table=table, attrs=','.join(quoted_attrs))
         tic = time.perf_counter()
-        conn = self.engine.connect()
-        result = conn.execute(stmt)
-        conn.close()
+        with self.engine.begin() as conn:
+            stmt = sql.text(stmt)
+            result = conn.execute(stmt)
         toc = time.perf_counter()
         logging.debug('Time to create index: %.2f secs', toc-tic)
         return result
