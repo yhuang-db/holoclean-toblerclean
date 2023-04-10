@@ -8,7 +8,7 @@ pytest-xdist
 python-Levenshtein
 scikit-learn
 scipy
-sqlalchemy==1.4.46
+sqlalchemy
 torch
 tqdm
 duckdb
