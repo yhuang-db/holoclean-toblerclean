@@ -1,3 +1,4 @@
+import logging
 from string import Template
 
 import torch
@@ -70,15 +71,15 @@ class ContinuousFeaturizer(Featurizer):
 
         :return: PyTorch Tensor
         """
-
         query = template_from_distance_matrix.substitute(
             init_table=self.ds.raw_data.name,
             pos_values=AuxTables.pos_values.name,
             distance_matrix=AuxTables.distance_matrix.name,
             tobler_attr=self.tobler_attr
         )
-
+        logging.debug(f'ToblerContinuousFeaturizer: start execute {query}')
         result = self.ds.engine.execute_query(query)
+        logging.debug('ToblerContinuousFeaturizer: finish query')
         weighted_violations = [[i[0], i[1], sum(i[2])] for i in result]
         # weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2])] for i in result]
         # weighted_violations = [[i[0], i[1], cal_weighted_violation(i[2], self.tobler_normalized_distance)] for i in result]
